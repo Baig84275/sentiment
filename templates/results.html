@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sentiment Results</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+  <div class="container">
+    <h1>Sentiment Analysis Results</h1>
+    <a href="/">Back to Upload</a>
+
+    <div>
+  {{ tables[:20]|safe }}
+    </div>
+
+    <h2>Visualization</h2>
+    <img src="{{ url_for('static', filename='sentiment_plot.png') }}" alt="Sentiment Plot">
+
+    <div>
+      <a href="/download_csv" class="btn-download">Download CSV</a>
+    </div>
+  </div>
+</body>
+
+</html>
