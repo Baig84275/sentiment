@@ -1,4 +1,4 @@
-#!/Users/macuser/Documents/bushra-project/sentiment-analysis/venv/bin/python3.11
+#!/Users/macuser/Documents/bushra-project/venv/bin/python3.11
 # -*- coding: utf-8 -*-
 import re
 import sys

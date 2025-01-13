@@ -1,7 +1,6 @@
 import matplotlib
 matplotlib.use('Agg')  # Use non-GUI backend
 
-import openai
 from flask import Flask, render_template, request, send_file
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -22,8 +21,9 @@ nltk.download('punkt')
 app = Flask(__name__)
 analyzer = SentimentIntensityAnalyzer()
 
-# Set OpenAI API Key (Replace with your key)
-client = openai.Client(api_key="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")
+# Load the CSV containing hardcoded reasoning
+reasoning_csv_path = "hardcoded_reasoning.csv"  # Update with your actual CSV file path
+reasoning_df = pd.read_csv(reasoning_csv_path)
 
 
 def extract_text_from_pdf(pdf_file):
@@ -51,14 +51,12 @@ def process_pdf_text(text):
             current_brand = line
             collecting_slogan = False  # Reset flag
             slogan_text = ""  # Reset slogan
-            print(f"Brand Detected: {current_brand}")
 
         # Detect Campaign Name
         elif "Campaign Name:" in line:
             campaign_match = re.search(r'Campaign Name:\s*["“](.+?)["”]', line)
             if campaign_match:
                 campaign_name = campaign_match.group(1)
-            print(f"Campaign Name Detected: {campaign_name}")
 
         # Detect Slogan/Textual Content
         elif "Slogan/Textual Content:" in line:
@@ -70,7 +68,6 @@ def process_pdf_text(text):
                     collecting_slogan = False
                 else:  # Multiline slogan starts
                     collecting_slogan = True
-            print(f"Slogan Start Detected: {slogan_text}")
 
         # Collect Multiline Slogan
         elif collecting_slogan:
@@ -82,14 +79,12 @@ def process_pdf_text(text):
 
         # Finalize Entry
         if not collecting_slogan and slogan_text:
-            print(f"Finalizing Entry for: {current_brand}")
-
             # Perform Sentiment Analysis
             sentiment_score = analyzer.polarity_scores(slogan_text)
             sentiment_category = categorize_sentiment(sentiment_score['compound'])
 
-            # Generate AI Reasoning
-            reasoning = get_ai_reasoning(slogan_text, sentiment_score['compound'])
+            # Fetch Hardcoded Reasoning
+            reasoning = fetch_reasoning(current_brand, campaign_name, slogan_text)
 
             # Append Entry
             entries.append({
@@ -98,16 +93,29 @@ def process_pdf_text(text):
                 'Slogan/Textual Content': slogan_text,
                 'Compound Score': sentiment_score['compound'],
                 'Sentiment Category': sentiment_category,
-                'AI Reasoning': reasoning
+                'Reasoning': reasoning
             })
-            print(f"Entry Added: {entries[-1]}")
 
             # Reset slogan_text after adding the entry
             slogan_text = ""
 
-    print(f"Total Entries Processed: {len(entries)}")
     return pd.DataFrame(entries)
 
+
+def fetch_reasoning(brand_name, campaign_name, slogan_text):
+    """
+    Fetch the hardcoded reasoning from the CSV file based on the brand name, campaign name, or slogan.
+    """
+    filtered_df = reasoning_df[
+        (reasoning_df['Brand Name'] == brand_name) &
+        (reasoning_df['Campaign Name'] == campaign_name)
+    ]
+
+    # Check if the column exists and has data
+    if 'AI' in filtered_df.columns and not filtered_df.empty:
+        return filtered_df['AI'].iloc[0]
+    else:
+        return "No reasoning available."
 
 
 
@@ -118,24 +126,6 @@ def categorize_sentiment(score):
         return 'Negative'
     else:
         return 'Neutral'
-
-
-def get_ai_reasoning(slogan, sentiment_score):
-    sentiment_label = "positive" if sentiment_score > 0.05 else "negative" if sentiment_score < -0.05 else "neutral"
-
-    messages = [
-        {"role": "system", "content": "You are a marketing analyst assistant specializing in creating concise and impactful explanations of advertisement effectiveness."},
-        {"role": "user", "content": f"The slogan '{slogan}' received a {sentiment_label} sentiment score of {sentiment_score}. Provide a short, attractive, and compelling explanation of why this slogan evokes a {sentiment_label} sentiment from customers in under 50 words."}
-    ]
-
-    response = client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=messages,
-        max_tokens=50  # Limit to ensure brevity
-    )
-
-    return response.choices[0].message.content.strip()
-
 
 
 def create_plot(df):
@@ -153,6 +143,8 @@ def create_plot(df):
     plt.savefig('static/sentiment_plot.png')
     plt.close()
 
+print(reasoning_df.head())
+print(reasoning_df.columns)
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -171,13 +163,10 @@ def index():
             return "Unsupported file type. Please upload a .pdf or .txt file.", 400
 
         latest_df = sentiment_df
-        print(f"DataFrame shape: {latest_df.shape}")  # Debugging
-
         create_plot(sentiment_df)
         return render_template('results.html', tables=[sentiment_df.to_html(classes='data', header=True)])
 
     return render_template('index.html')
-
 
 
 @app.route('/download_csv')

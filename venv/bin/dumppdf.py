@@ -1,4 +1,4 @@
-#!/Users/macuser/Documents/bushra-project/sentiment-analysis/venv/bin/python3.11
+#!/Users/macuser/Documents/bushra-project/venv/bin/python3.11
 """Extract pdf structure in XML format"""
 import logging
 import os.path

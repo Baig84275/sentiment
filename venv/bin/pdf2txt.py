@@ -1,4 +1,4 @@
-#!/Users/macuser/Documents/bushra-project/sentiment-analysis/venv/bin/python3.11
+#!/Users/macuser/Documents/bushra-project/venv/bin/python3.11
 """A command line tool for extracting text and images from PDF and
 output it to plain text, html, xml or tags."""
 import argparse
